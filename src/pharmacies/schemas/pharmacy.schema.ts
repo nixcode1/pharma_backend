@@ -5,10 +5,15 @@ import { Drug } from './drug.schema';
 
 export type PharmacyDocument = Pharmacy & Document;
 
-@Schema({toJSON: {
-  virtuals: true,
-  transform: function (doc, ret) {   delete ret._id  }
-}})
+@Schema({
+  toJSON: {
+    virtuals: true,
+    transform: function (doc, ret) {
+      delete ret._id; 
+      delete ret.__v; 
+    }
+  },
+})
 export class Pharmacy {
 
   @Prop()
@@ -21,7 +26,7 @@ export class Pharmacy {
   }))
   location: string;
 
-  @Prop({required: false})
+  @Prop({ required: false })
   drugs?: Drug[]
 
 }

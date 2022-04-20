@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
 import { PharmaciesService } from './pharmacies.service';
 import { CreatePharmacyDto } from './dto/create-pharmacy.dto';
 import { UpdatePharmacyDto } from './dto/update-pharmacy.dto';
+import { Pharmacy } from './entities/pharmacy.entity';
 
 @Controller('pharmacies')
 export class PharmaciesController {
@@ -12,9 +13,9 @@ export class PharmaciesController {
     return this.pharmaciesService.create(createPharmacyDto);
   }
 
-  @Get()
-  findAll() {
-    return this.pharmaciesService.findAll();
+  @Get('/find')
+ async find(@Query('query') query: string = '', @Query('range') range: number |  undefined = 100) : Promise<Array<Pharmacy>>  {
+    return await this.pharmaciesService.find(query, Number(range));
   }
 
   @Get(':id')
