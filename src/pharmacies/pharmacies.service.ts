@@ -1,18 +1,22 @@
 import { Model } from 'mongoose';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { CreatePharmacyDto } from './dto/create-pharmacy.dto';
 import { UpdatePharmacyDto } from './dto/update-pharmacy.dto';
 import { Pharmacy, PharmacyDocument } from './schemas/pharmacy.schema';
 import { Drug } from './schemas/drug.schema';
+import { RedisService } from 'src/common/services/redis.service';
+import { GeoCoordinates, GeoReplyWith, GeoSearchOptions } from '@redis/client/dist/lib/commands/generic-transformers';
+import mongoose from 'mongoose';
+import { IORedisService } from 'src/common/services/ioredis.service';
 
 @Injectable()
 export class PharmaciesService {
-  constructor(@InjectModel(Pharmacy.name) private pharmacyModel: Model<PharmacyDocument>) { }
+  constructor(@InjectModel(Pharmacy.name) private pharmacyModel: Model<PharmacyDocument>, private redisService: RedisService, private ioredisService: IORedisService) { }
 
   async onModuleInit() {
     console.log("Seeding data...");
-    await this.seedData();
+    // await this.seedData();
     console.log("Seeding down");
   }
 
@@ -20,42 +24,11 @@ export class PharmaciesService {
     return 'This action adds a new pharmacy';
   }
 
-  async find(name: string, range: number): Promise<Array<Pharmacy>> {
-    const query = await this.pharmacyModel.aggregate([
+  async find(name: string, range: number): Promise<Pharmacy[]> {
 
-      {
-        $geoNear: {
-          near: { type: "Point", coordinates: [4.897105874430844, 6.906863246817034] },
-          distanceField: "distance",
-          maxDistance: range,
-          // query: {
-          //   "drugs.name": {
-          //     '$regex': name,
-          //     '$options': 'i'
-          //   }
-          // },
-          key: 'location',
-          spherical: false
-        }
-      },
-      {
-        $unwind:
-        {
-          path: "$drugs",
-        }
-      },
-      {
-        $match:
-        {
-          "drugs.name": {
-            '$regex': name,
-            '$options': 'i'
-          }
-        }
-      },
-    ])
-
-    return query;
+    const nearbyPharmIds = await this.searchNearByPharms([4.896336137252542, 6.906888119058976], range);
+    
+    return [];
   }
 
   findOne(id: number) {
@@ -111,12 +84,78 @@ export class PharmaciesService {
         drugsData = drugList[i - 4];
       }
 
-      const data = await this.pharmacyModel.findByIdAndUpdate(pharm._id,
+      await this.pharmacyModel.findByIdAndUpdate(pharm._id,
         { $push: { drugs: { $each: drugsData } } })
     }
-    const search = await this.find("na", 1000);
+    const search = await this.pharmacyModel.find();
     console.log(JSON.stringify(search, null, 4));
+
+    await this.ioredisService.getClient().del('pharmacies')
+    for (const pharm of search) {
+      const result = await this.redisService.getClient().geoAdd('pharmacies', {
+        latitude: pharm.location.coordinates[0],
+        longitude: pharm.location.coordinates[1],
+        member: pharm.name
+      })
+      console.log('REDIS stored', result, pharm.id);
+    }
+    await this.find("na", 1000);
   }
+
+  async searchNearByPharms(coordinates: number[], distance: number): Promise<string[]> {
+
+    //get nearby pharmacies id from redis
+    const data = await this.redisService.getClient().GEORADIUS_WITH(
+      "pharmacies",
+      <GeoCoordinates>{
+        latitude: 4.896336137252542, longitude: 6.906888119058976
+      },
+      70,
+      'm',
+      [GeoReplyWith.DISTANCE, GeoReplyWith.COORDINATES]
+    )
+    console.log(data)
+
+    return data.map(e => e.member);
+  }
+
+  // async agggregatedSearch(): Promise<Array<Pharmacy> {
+  // const query = await this.pharmacyModel.aggregate([
+
+  //   {
+  //     $geoNear: {
+  //       near: { type: "Point", coordinates: [4.897105874430844, 6.906863246817034] },
+  //       distanceField: "distance",
+  //       maxDistance: range,
+  //       // query: {
+  //       //   "drugs.name": {
+  //       //     '$regex': name,
+  //       //     '$options': 'i'
+  //       //   }
+  //       // },
+  //       key: 'location',
+  //       spherical: false
+  //     }
+  //   },
+  //   {
+  //     $unwind:
+  //     {
+  //       path: "$drugs",
+  //     }
+  //   },
+  //   {
+  //     $match:
+  //     {
+  //       "drugs.name": {
+  //         '$regex': name,
+  //         '$options': 'i'
+  //       }
+  //     }
+  //   },
+  // ])
+
+  // return query;
+  // }
 
 
 

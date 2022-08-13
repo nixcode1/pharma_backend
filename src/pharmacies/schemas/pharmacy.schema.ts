@@ -24,7 +24,10 @@ export class Pharmacy {
     required: true,
     index: '2dsphere'
   }))
-  location: string;
+  location: {
+    type: string,
+    coordinates: number[]
+  };
 
   @Prop({ required: false })
   drugs?: Drug[]
