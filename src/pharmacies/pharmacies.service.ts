@@ -16,7 +16,7 @@ export class PharmaciesService {
 
   async onModuleInit() {
     console.log("Seeding data...");
-    // await this.seedData();
+    await this.seedData();
     console.log("Seeding down");
   }
 
@@ -27,7 +27,7 @@ export class PharmaciesService {
   async find(name: string, range: number): Promise<Pharmacy[]> {
 
     const nearbyPharmIds = await this.searchNearByPharms([4.896336137252542, 6.906888119058976], range);
-    
+
     return [];
   }
 
@@ -90,33 +90,55 @@ export class PharmaciesService {
     const search = await this.pharmacyModel.find();
     console.log(JSON.stringify(search, null, 4));
 
-    await this.ioredisService.getClient().del('pharmacies')
-    for (const pharm of search) {
-      const result = await this.redisService.getClient().geoAdd('pharmacies', {
-        latitude: pharm.location.coordinates[0],
-        longitude: pharm.location.coordinates[1],
-        member: pharm.name
-      })
-      console.log('REDIS stored', result, pharm.id);
-    }
+    // await this.ioredisService.getClient().del('pharmacies')
+    // for (const pharm of search) {
+    //   const result = await this.redisService.getClient().geoAdd('pharmacies', {
+    //     latitude: pharm.location.coordinates[0],
+    //     longitude: pharm.location.coordinates[1],
+    //     member: pharm.name
+    //   })
+    //   console.log('REDIS stored', result, pharm.id);
+    // }
     await this.find("na", 1000);
   }
 
   async searchNearByPharms(coordinates: number[], distance: number): Promise<string[]> {
 
     //get nearby pharmacies id from redis
-    const data = await this.redisService.getClient().GEORADIUS_WITH(
-      "pharmacies",
-      <GeoCoordinates>{
-        latitude: 4.896336137252542, longitude: 6.906888119058976
-      },
-      70,
-      'm',
-      [GeoReplyWith.DISTANCE, GeoReplyWith.COORDINATES]
-    )
-    console.log(data)
+    // const redisStartTime = Date.now()
+    // const data = await this.redisService.getClient().GEORADIUS_WITH(
+    //   "pharmacies",
+    //   <GeoCoordinates>{
+    //     latitude: 4.896336137252542, longitude: 6.906888119058976
+    //   },
+    //   70,
+    //   'm',
+    //   [GeoReplyWith.DISTANCE, GeoReplyWith.COORDINATES]
+    // )
+    // console.log('Redis ', Date.now() - redisStartTime)
+    // console.log(data)
 
-    return data.map(e => e.member);
+
+    const mongodbStartTime = Date.now()
+    const mongoSearch = await this.pharmacyModel.
+      find(
+        {
+          location:
+          {
+            $near:
+            {
+              $geometry: { type: "Point", coordinates: [4.896336137252542, 6.906888119058976] },
+              $minDistance: 0,
+              $maxDistance: 70
+            }
+          }
+        }
+      )
+    console.log('Mongo', Date.now() - mongodbStartTime)
+    const pharmIds = mongoSearch.map(e => e.id);
+    console.log(pharmIds)
+
+    return pharmIds;
   }
 
   // async agggregatedSearch(): Promise<Array<Pharmacy> {
