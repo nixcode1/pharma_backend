@@ -1,23 +1,27 @@
 import { Model } from 'mongoose';
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { CreatePharmacyDto } from './dto/create-pharmacy.dto';
 import { UpdatePharmacyDto } from './dto/update-pharmacy.dto';
 import { Pharmacy, PharmacyDocument } from './schemas/pharmacy.schema';
-import { Drug } from './schemas/drug.schema';
+// import { Drug } from './schemas/drug.schema';
 import { RedisService } from 'src/common/services/redis.service';
-import { GeoCoordinates, GeoReplyWith, GeoSearchOptions } from '@redis/client/dist/lib/commands/generic-transformers';
-import mongoose from 'mongoose';
+// import { GeoCoordinates, GeoReplyWith, GeoSearchOptions } from '@redis/client/dist/lib/commands/generic-transformers';
+// import mongoose from 'mongoose';
 import { IORedisService } from 'src/common/services/ioredis.service';
 
 @Injectable()
 export class PharmaciesService {
-  constructor(@InjectModel(Pharmacy.name) private pharmacyModel: Model<PharmacyDocument>, private redisService: RedisService, private ioredisService: IORedisService) { }
+  constructor(
+    @InjectModel(Pharmacy.name) private pharmacyModel: Model<PharmacyDocument>,
+    private redisService: RedisService,
+    private ioredisService: IORedisService,
+  ) {}
 
   async onModuleInit() {
-    console.log("Seeding data...");
+    console.log('Seeding data...');
     await this.seedData();
-    console.log("Seeding down");
+    console.log('Seeding down');
   }
 
   create(createPharmacyDto: CreatePharmacyDto) {
@@ -25,8 +29,10 @@ export class PharmaciesService {
   }
 
   async find(name: string, range: number): Promise<Pharmacy[]> {
-
-    const nearbyPharmIds = await this.searchNearByPharms([4.896336137252542, 6.906888119058976], range);
+    const nearbyPharmIds = await this.searchNearByPharms(
+      [4.896336137252542, 6.906888119058976],
+      range,
+    );
 
     return [];
   }
@@ -45,47 +51,73 @@ export class PharmaciesService {
 
   async seedData() {
     // Create pharmacies
-    const listOfPharms = [{
-
-      location: { type: 'Point', coordinates: [4.896373473997349, 6.907649779181705] }
-    },
-    {
-      location: { type: 'Point', coordinates: [4.896702204408156, 6.90685229805645] }
-    },
-    {
-      location: { type: 'Point', coordinates: [4.895432201721392, 6.906951681894093] }
-    },
-    {
-      location: { type: 'Point', coordinates: [4.896537609625513, 6.903776182564811] }
-    },
-    {
-      location: { type: 'Point', coordinates: [4.8955053377948055, 6.915162287410065] }
-    },
-    {
-      location: { type: 'Point', coordinates: [4.902106603592787, 6.908990848952584] }
-    },
-    {
-      location: { type: 'Point', coordinates: [4.890325087043335, 6.902450464662324] }
-    },
-    {
-      location: { type: 'Point', coordinates: [4.896336137252542, 6.906888119058976] }
-    }];
+    const listOfPharms = [
+      {
+        location: {
+          type: 'Point',
+          coordinates: [4.896373473997349, 6.907649779181705],
+        },
+      },
+      {
+        location: {
+          type: 'Point',
+          coordinates: [4.896702204408156, 6.90685229805645],
+        },
+      },
+      {
+        location: {
+          type: 'Point',
+          coordinates: [4.895432201721392, 6.906951681894093],
+        },
+      },
+      {
+        location: {
+          type: 'Point',
+          coordinates: [4.896537609625513, 6.903776182564811],
+        },
+      },
+      {
+        location: {
+          type: 'Point',
+          coordinates: [4.8955053377948055, 6.915162287410065],
+        },
+      },
+      {
+        location: {
+          type: 'Point',
+          coordinates: [4.902106603592787, 6.908990848952584],
+        },
+      },
+      {
+        location: {
+          type: 'Point',
+          coordinates: [4.890325087043335, 6.902450464662324],
+        },
+      },
+      {
+        location: {
+          type: 'Point',
+          coordinates: [4.896336137252542, 6.906888119058976],
+        },
+      },
+    ];
     this.pharmacyModel.collection.drop();
     let drugsData;
     for (let i = 0; i < listOfPharms.length; i++) {
-      let pharm = await this.pharmacyModel.create({
+      const pharm = await this.pharmacyModel.create({
         ...listOfPharms[i],
-        name: `Pharm ${i + 1}`
-      })
+        name: `Pharm ${i + 1}`,
+      });
 
       if (i < 4) {
-        drugsData = drugList[i]
+        drugsData = drugList[i];
       } else {
         drugsData = drugList[i - 4];
       }
 
-      await this.pharmacyModel.findByIdAndUpdate(pharm._id,
-        { $push: { drugs: { $each: drugsData } } })
+      await this.pharmacyModel.findByIdAndUpdate(pharm._id, {
+        $push: { drugs: { $each: drugsData } },
+      });
     }
     const search = await this.pharmacyModel.find();
     console.log(JSON.stringify(search, null, 4));
@@ -99,11 +131,13 @@ export class PharmaciesService {
     //   })
     //   console.log('REDIS stored', result, pharm.id);
     // }
-    await this.find("na", 1000);
+    await this.find('na', 1000);
   }
 
-  async searchNearByPharms(coordinates: number[], distance: number): Promise<string[]> {
-
+  async searchNearByPharms(
+    coordinates: number[],
+    distance: number,
+  ): Promise<string[]> {
     //get nearby pharmacies id from redis
     // const redisStartTime = Date.now()
     // const data = await this.redisService.getClient().GEORADIUS_WITH(
@@ -118,25 +152,22 @@ export class PharmaciesService {
     // console.log('Redis ', Date.now() - redisStartTime)
     // console.log(data)
 
-
-    const mongodbStartTime = Date.now()
-    const mongoSearch = await this.pharmacyModel.
-      find(
-        {
-          location:
-          {
-            $near:
-            {
-              $geometry: { type: "Point", coordinates: [4.896336137252542, 6.906888119058976] },
-              $minDistance: 0,
-              $maxDistance: 70
-            }
-          }
-        }
-      )
-    console.log('Mongo', Date.now() - mongodbStartTime)
-    const pharmIds = mongoSearch.map(e => e.id);
-    console.log(pharmIds)
+    const mongodbStartTime = Date.now();
+    const mongoSearch = await this.pharmacyModel.find({
+      location: {
+        $near: {
+          $geometry: {
+            type: 'Point',
+            coordinates: [4.896336137252542, 6.906888119058976],
+          },
+          $minDistance: 0,
+          $maxDistance: 70,
+        },
+      },
+    });
+    console.log('Mongo', Date.now() - mongodbStartTime);
+    const pharmIds = mongoSearch.map((e) => e.id);
+    console.log(pharmIds);
 
     return pharmIds;
   }
@@ -178,8 +209,6 @@ export class PharmaciesService {
 
   // return query;
   // }
-
-
 
   // async seedTestData() {
   //   this.pharmacyModel.collection.drop();
@@ -228,69 +257,69 @@ export class PharmaciesService {
 
 const drugs1 = [
   {
-    name: "Paracetamol",
-    genericName: "Test",
-    price: 50.0
+    name: 'Paracetamol',
+    genericName: 'Test',
+    price: 50.0,
   },
   {
-    name: "Panadol",
-    genericName: "Test",
-    price: 50.0
+    name: 'Panadol',
+    genericName: 'Test',
+    price: 50.0,
   },
   {
-    name: "Amala",
-    genericName: "Test",
-    price: 50.0
+    name: 'Amala',
+    genericName: 'Test',
+    price: 50.0,
   },
-]
+];
 
 const drugs2 = [
   {
-    name: "Paracetamol",
-    genericName: "Test",
-    price: 60.0
+    name: 'Paracetamol',
+    genericName: 'Test',
+    price: 60.0,
   },
   {
-    name: "Vitamin C",
-    genericName: "Test",
-    price: 50.0
+    name: 'Vitamin C',
+    genericName: 'Test',
+    price: 50.0,
   },
-]
+];
 
 const drugs3 = [
   {
-    name: "Paracetamol",
-    genericName: "Test",
-    price: 90.0
+    name: 'Paracetamol',
+    genericName: 'Test',
+    price: 90.0,
   },
   {
-    name: "Amala",
-    genericName: "Test",
-    price: 50.0
+    name: 'Amala',
+    genericName: 'Test',
+    price: 50.0,
   },
   {
-    name: "Vitamin C",
-    genericName: "Test",
-    price: 50.0
+    name: 'Vitamin C',
+    genericName: 'Test',
+    price: 50.0,
   },
-]
+];
 
 const drugs4 = [
   {
-    name: "Gentamincin",
-    genericName: "Test",
-    price: 80.0
+    name: 'Gentamincin',
+    genericName: 'Test',
+    price: 80.0,
   },
   {
-    name: "Coartem",
-    genericName: "ACT",
-    price: 50.0
+    name: 'Coartem',
+    genericName: 'ACT',
+    price: 50.0,
   },
   {
-    name: "Vitamin C",
-    genericName: "Test",
-    price: 50.0
+    name: 'Vitamin C',
+    genericName: 'Test',
+    price: 50.0,
   },
-]
+];
 
 const drugList = [drugs1, drugs2, drugs3, drugs4];

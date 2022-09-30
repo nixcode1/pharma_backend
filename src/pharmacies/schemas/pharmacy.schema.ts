@@ -9,29 +9,29 @@ export type PharmacyDocument = Pharmacy & Document;
   toJSON: {
     virtuals: true,
     transform: function (doc, ret) {
-      delete ret._id; 
-      delete ret.__v; 
-    }
+      delete ret._id;
+      delete ret.__v;
+    },
   },
 })
 export class Pharmacy {
-
   @Prop()
   name: string;
 
-  @Prop(raw({
-    type: pointSchema,
-    required: true,
-    index: '2dsphere'
-  }))
+  @Prop(
+    raw({
+      type: pointSchema,
+      required: true,
+      index: '2dsphere',
+    }),
+  )
   location: {
-    type: string,
-    coordinates: number[]
+    type: string;
+    coordinates: number[];
   };
 
   @Prop({ required: false })
-  drugs?: Drug[]
-
+  drugs?: Drug[];
 }
 
 export const PharmacySchema = SchemaFactory.createForClass(Pharmacy);

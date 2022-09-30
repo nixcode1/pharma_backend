@@ -3,13 +3,13 @@ import Redis from 'ioredis';
 
 @Injectable()
 export class IORedisService {
-   private client: Redis
+  private client: Redis;
 
-    async onModuleInit() {
-        this.client = new Redis();
-    }
+  async onModuleInit() {
+    this.client = new Redis();
+  }
 
-    getClient(): Redis {
-        return this.client;
-    }
+  getClient(): Redis {
+    return this.client;
+  }
 }
