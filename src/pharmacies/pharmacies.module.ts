@@ -6,10 +6,16 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { PharmacySchema } from './schemas/pharmacy.schema';
 import { RedisService } from 'src/common/services/redis.service';
 import { IORedisService } from 'src/common/services/ioredis.service';
+import { Drug, DrugSchema } from 'src/drugs/schemas/drug.schema';
 
 @Module({
-  imports: [MongooseModule.forFeature([{ name: Pharmacy.name, schema: PharmacySchema }])],
+  imports: [
+    MongooseModule.forFeature([
+      { name: Pharmacy.name, schema: PharmacySchema },
+      { name: Drug.name, schema: DrugSchema },
+    ]),
+  ],
   controllers: [PharmaciesController],
-  providers: [PharmaciesService, RedisService, IORedisService]
+  providers: [PharmaciesService],
 })
 export class PharmaciesModule {}

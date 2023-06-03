@@ -6,8 +6,10 @@ import { Drug } from './entities/drug.entity';
 import { DrugSchema } from './schemas/drug.schema';
 
 @Module({
-  imports: [MongooseModule.forFeature([{name: Drug.name, schema: DrugSchema}])],
+  imports: [
+    MongooseModule.forFeature([{ name: Drug.name, schema: DrugSchema }]),
+  ],
   controllers: [DrugsController],
-  providers: [DrugsService]
+  providers: [DrugsService],
 })
 export class DrugsModule {}

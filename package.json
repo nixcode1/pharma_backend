@@ -28,6 +28,7 @@
     "@nestjs/platform-express": "^8.0.0",
     "@nestjs/swagger": "^5.2.1",
     "ioredis": "^5.2.2",
+    "meilisearch": "^0.27.0",
     "mongoose": "^6.2.9",
     "redis": "^4.2.0",
     "reflect-metadata": "^0.1.13",
